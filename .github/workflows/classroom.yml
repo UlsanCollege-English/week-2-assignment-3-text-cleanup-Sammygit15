@@ -1,27 +1,45 @@
 name: Autograding Tests
 'on':
-- push
-- repository_dispatch
+  - push
+  - repository_dispatch
+
 permissions:
   checks: write
   actions: read
   contents: read
+
 jobs:
   run-autograding-tests:
     runs-on: ubuntu-latest
     if: github.actor != 'github-classroom[bot]'
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Text Cleanup Tests
-      id: text-cleanup-tests
-      uses: classroom-resources/autograding-python-grader@v1
-      with:
-        timeout: 10
-        setup-command: ''
-    - name: Autograding Reporter
-      uses: classroom-resources/autograding-grading-reporter@v1
-      env:
-        TEXT-CLEANUP-TESTS_RESULTS: "${{steps.text-cleanup-tests.outputs.result}}"
-      with:
-        runners: text-cleanup-tests
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Python & install pytest + optional requirements
+      - name: Setup Python & dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+
+      # Set PYTHONPATH for src/
+      - name: Set PYTHONPATH
+        run: |
+          echo "Adding src/ to PYTHONPATH"
+          export PYTHONPATH=$GITHUB_WORKSPACE
+
+      # Run the autograder
+      - name: Text Cleanup Tests
+        id: text-cleanup-tests
+        uses: classroom-resources/autograding-python-grader@v1
+        with:
+          timeout: 10
+          setup-command: ''
+
+      - name: Autograding Reporter
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          TEXT-CLEANUP-TESTS_RESULTS: "${{steps.text-cleanup-tests.outputs.result}}"
+        with:
+          runners: text-cleanup-tests
